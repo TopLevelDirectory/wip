@@ -1,0 +1,10 @@
+# Runtime directories (created by oneclick.sh)
+logs/
+.locks/
+out/
+
+# Virtual environment
+.venv/
+
+# Backup files from self-update
+*.bak.*
