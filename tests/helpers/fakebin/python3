@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Fake python3 for testing
+
+behavior="${FAKEBIN_PYTHON3_BEHAVIOR:-default}"
+
+case "$behavior" in
+  fail)
+    echo "python3: simulated failure" >&2
+    exit 1
+    ;;
+esac
+
+# Check if we're being asked to parse JSON (for GitHub API response)
+if [[ "$1" == "-c" ]]; then
+  # Execute the Python code
+  # For our test cases, we mainly need json parsing
+  code="$2"
+
+  # Simple pattern matching for common test cases
+  if [[ "$code" == *"json.load"*"tag_name"* ]]; then
+    # Read stdin and extract tag_name
+    input=$(cat)
+    if [[ "$input" == *'"tag_name"'* ]]; then
+      # Very basic JSON parsing for tests
+      echo "$input" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'
+      exit 0
+    fi
+    echo ""
+    exit 0
+  fi
+
+  # For other Python code, try real python if available
+  if command -v /usr/bin/python3 >/dev/null 2>&1; then
+    exec /usr/bin/python3 "$@"
+  fi
+fi
+
+# Version check
+if [[ "$1" == "--version" || "$1" == "-V" ]]; then
+  echo "Python 3.11.0 (fake)"
+  exit 0
+fi
+
+# Default: pass through to real python if available
+if command -v /usr/bin/python3 >/dev/null 2>&1; then
+  exec /usr/bin/python3 "$@"
+fi
+
+echo "python3: command executed (fake)" >&2
+exit 0

@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Fake curl for testing - simulates HTTP requests
+
+behavior="${FAKEBIN_CURL_BEHAVIOR:-default}"
+
+case "$behavior" in
+  fail)
+    echo "curl: (7) Failed to connect" >&2
+    exit 7
+    ;;
+  rate_limited)
+    echo '{"message": "API rate limit exceeded"}' >&2
+    exit 0
+    ;;
+  html_error)
+    echo '<!DOCTYPE html><html><body>404 Not Found</body></html>'
+    exit 0
+    ;;
+esac
+
+# Parse arguments to find URL
+url=""
+output_file=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -o)
+      output_file="$2"
+      shift 2
+      ;;
+    -fsSL|-fsS|-s|-S|-f|-L)
+      shift
+      ;;
+    -H)
+      shift 2
+      ;;
+    http*|https*)
+      url="$1"
+      shift
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+
+# Simulate responses based on URL pattern
+response=""
+if [[ "$url" == *"api.github.com"*"releases/latest"* ]]; then
+  response='{
+    "tag_name": "v3.0.0",
+    "name": "Release v3.0.0",
+    "published_at": "2025-01-01T00:00:00Z"
+  }'
+elif [[ "$url" == *"raw.githubusercontent.com"*"oneclick.sh"* ]]; then
+  response='#!/usr/bin/env bash
+readonly APP="glassbox"
+readonly VERSION="3.0.1"
+echo "This is the updated script"
+'
+else
+  response='{"status": "ok"}'
+fi
+
+if [[ -n "$output_file" ]]; then
+  echo "$response" > "$output_file"
+else
+  echo "$response"
+fi
+
+exit 0

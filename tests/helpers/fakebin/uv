@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Fake uv for testing - simulates uv package manager
+
+behavior="${FAKEBIN_UV_BEHAVIOR:-default}"
+
+case "$behavior" in
+  fail)
+    echo "uv: simulated failure" >&2
+    exit 1
+    ;;
+  missing_python)
+    echo "error: No Python interpreters found" >&2
+    exit 1
+    ;;
+esac
+
+case "$1" in
+  venv)
+    # Simulate creating a venv
+    local venv_path="${2:-.venv}"
+    mkdir -p "$venv_path/bin"
+
+    # Create a fake activate script
+    cat > "$venv_path/bin/activate" << 'ACTIVATE'
+# Fake activate script for testing
+export VIRTUAL_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export PATH="$VIRTUAL_ENV/bin:$PATH"
+ACTIVATE
+
+    # Create fake python/pip
+    echo '#!/bin/bash' > "$venv_path/bin/python"
+    echo 'echo "Python 3.11.0 (fake)"' >> "$venv_path/bin/python"
+    chmod +x "$venv_path/bin/python"
+
+    echo '#!/bin/bash' > "$venv_path/bin/pip"
+    echo 'echo "pip 23.0 (fake)"' >> "$venv_path/bin/pip"
+    chmod +x "$venv_path/bin/pip"
+
+    echo "Using Python 3.11.0"
+    echo "Creating virtualenv at: $venv_path"
+    exit 0
+    ;;
+  pip)
+    case "$2" in
+      sync)
+        echo "Resolved 5 packages"
+        echo "Downloaded 5 packages"
+        echo "Installed 5 packages"
+        exit 0
+        ;;
+      install)
+        echo "Resolved 1 package"
+        echo "Installed ${3:-package}"
+        exit 0
+        ;;
+      *)
+        echo "uv pip: unknown command '$2'" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+  --version)
+    echo "uv 0.4.0"
+    exit 0
+    ;;
+  *)
+    echo "uv: unknown command '$1'" >&2
+    exit 1
+    ;;
+esac

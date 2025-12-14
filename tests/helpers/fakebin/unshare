@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Fake unshare for testing - simulates network namespace isolation
+
+behavior="${FAKEBIN_UNSHARE_BEHAVIOR:-default}"
+
+case "$behavior" in
+  fail)
+    echo "unshare: cannot change network namespace: Operation not permitted" >&2
+    exit 1
+    ;;
+  unavailable)
+    echo "unshare: command not found" >&2
+    exit 127
+    ;;
+esac
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -n|--net)
+      shift
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+# Execute the remaining command (simulating isolation)
+if [[ $# -gt 0 ]]; then
+  exec "$@"
+fi

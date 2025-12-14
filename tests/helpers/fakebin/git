@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# Fake git for testing - simulates git commands
+
+# Check for behavior override
+behavior="${FAKEBIN_GIT_BEHAVIOR:-default}"
+
+case "$behavior" in
+  fail)
+    echo "git: simulated failure" >&2
+    exit 1
+    ;;
+  not_a_repo)
+    if [[ "$1" == "rev-parse" && "$2" == "--is-inside-work-tree" ]]; then
+      echo "fatal: not a git repository" >&2
+      exit 128
+    fi
+    ;;
+  dirty)
+    if [[ "$1" == "status" && "$2" == "--porcelain" ]]; then
+      echo "M oneclick.sh"
+      exit 0
+    fi
+    ;;
+esac
+
+# Default behavior: pass through to real git if available
+if command -v /usr/bin/git >/dev/null 2>&1; then
+  exec /usr/bin/git "$@"
+elif command -v /bin/git >/dev/null 2>&1; then
+  exec /bin/git "$@"
+else
+  # Simulate basic git commands
+  case "$1" in
+    rev-parse)
+      if [[ "$2" == "--is-inside-work-tree" ]]; then
+        echo "true"
+        exit 0
+      elif [[ "$2" == "--show-toplevel" ]]; then
+        pwd
+        exit 0
+      elif [[ "$2" == "--abbrev-ref" && "$3" == "HEAD" ]]; then
+        echo "main"
+        exit 0
+      elif [[ "$2" == "HEAD" ]]; then
+        echo "abc123def456"
+        exit 0
+      fi
+      ;;
+    status)
+      if [[ "$2" == "--porcelain" ]]; then
+        # Clean by default
+        exit 0
+      fi
+      echo "On branch main"
+      echo "nothing to commit, working tree clean"
+      exit 0
+      ;;
+    remote)
+      if [[ "$2" == "get-url" && "$3" == "origin" ]]; then
+        echo "https://github.com/testowner/testrepo.git"
+        exit 0
+      fi
+      ;;
+    diff)
+      # No diff by default
+      exit 0
+      ;;
+    checkout)
+      echo "Updated 1 path from the index"
+      exit 0
+      ;;
+    fetch)
+      exit 0
+      ;;
+    pull)
+      echo "Already up to date."
+      exit 0
+      ;;
+    *)
+      echo "git: unknown command '$1'" >&2
+      exit 1
+      ;;
+  esac
+fi
